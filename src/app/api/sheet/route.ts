@@ -10,10 +10,15 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
+    const decode = (s: string) =>
+      s.replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+       .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(Number(dec)))
+       .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'");
+
     const payload = {
       url: body.url || "",
-      title: body.title || "",
-      description: body.description || "",
+      title: decode(body.title || ""),
+      description: decode(body.description || ""),
       category: body.category || "",
       tags: Array.isArray(body.tags) ? body.tags.join(", ") : "",
       memo: body.memo || "",
