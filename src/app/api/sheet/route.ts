@@ -20,42 +20,20 @@ export async function POST(request: NextRequest) {
       createdAt: body.createdAt || new Date().toISOString(),
     };
 
-    const jsonBody = JSON.stringify(payload);
-
-    // Apps Script는 302 리다이렉트를 하므로 수동으로 처리
-    let res = await fetch(APPS_SCRIPT_URL, {
+    // Apps Script는 text/plain으로 보내야 리다이렉트 시 body가 유지됨
+    const res = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Content-Length": Buffer.byteLength(jsonBody).toString(),
-      },
-      body: jsonBody,
-      redirect: "manual",
+      body: JSON.stringify(payload),
+      redirect: "follow",
     });
 
-    // 리다이렉트 응답이면 새 URL로 다시 POST
-    if (res.status === 302 || res.status === 301 || res.status === 307) {
-      const redirectUrl = res.headers.get("location");
-      if (redirectUrl) {
-        res = await fetch(redirectUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Content-Length": Buffer.byteLength(jsonBody).toString(),
-          },
-          body: jsonBody,
-          redirect: "follow",
-        });
-      }
-    }
-
     const text = await res.text();
+    console.log("Sheet response status:", res.status, "body:", text.slice(0, 200));
+
     try {
-      const result = JSON.parse(text);
-      return NextResponse.json(result);
+      return NextResponse.json(JSON.parse(text));
     } catch {
-      // JSON 파싱 실패해도 시트에 저장은 됐을 수 있음
-      return NextResponse.json({ result: "ok", raw: text });
+      return NextResponse.json({ result: "sent" });
     }
   } catch (err) {
     console.error("Sheet API error:", err);
